@@ -18,6 +18,16 @@ namespace SimpleDeHashing
 
         }
 
+        public static void scrollDown(int lines)
+        {
+            var posision = Console.GetCursorPosition();
+            for (int x = 0; x < lines; x++)
+            {
+                Console.WriteLine();
+            }
+            Console.SetCursorPosition(posision.Left, posision.Top);
+        }
+
         public static int PromtInt(string text) {
 
             int returnNumber = 0;

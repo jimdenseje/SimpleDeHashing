@@ -22,35 +22,51 @@ namespace SimpleDeHashing
             }
             RedisConnectorHelper.Connect(ipOrUrl);
 
-            Console.WriteLine("\nPress 1 for Client");
-            Console.WriteLine("Press 2 for Server\n");
-
-            int press = EasyCommandLine.PromtInt("Input", new List<int> {1,2});
-            if (press == 1)
+            while (true)
             {
-                Console.WriteLine();
-                startClient();
-            } else
-            {
-                Console.WriteLine();
 
-                string passwordHash = EasyCommandLine.PromtString("passwordHash");
-                if (passwordHash.Trim() == "")
+                int threads = EasyCommandLine.PromtInt("Number of Threads");
+                int chars = EasyCommandLine.PromtInt("Number of Chars");
+
+                Console.WriteLine("\nPress 1 for Client");
+                Console.WriteLine("Press 2 for Server\n");
+
+                int press = EasyCommandLine.PromtInt("Input", new List<int> {1,2});
+                if (press == 1)
                 {
-                    passwordHash = "$2y$10$Ot4wqtcJQ0VKQjWmJ/8.7.2rjkqIooRa1clgcra5ExBn4DjWbGryu";
+                    Console.WriteLine();
+                    startClient(threads);
+                } else
+                {
+                    Console.WriteLine();
+
+                    string passwordHash = EasyCommandLine.PromtString("passwordHash");
+                    if (passwordHash.Trim() == "")
+                    {
+                        passwordHash = "$2y$10$Ot4wqtcJQ0VKQjWmJ/8.7.2rjkqIooRa1clgcra5ExBn4DjWbGryu";
+                    }
+                    //a check whatever it's a valid hash could be a good idea
+
+                    Console.WriteLine();
+                    startServer(passwordHash, threads, chars);
                 }
-                //a check whatever it's a valid hash could be a good idea
+
+                Thread.Sleep(2000);
 
                 Console.WriteLine();
-                startServer(passwordHash);
-            }
+                Console.WriteLine("".PadLeft(Console.WindowWidth, '#'));
+                Console.WriteLine();
+                Console.WriteLine("RUN AGAIN?\n");
+                EasyCommandLine.scrollDown(10);
 
+            }
             //EncodeDecodeExcample();
         }
 
-        static void startServer(string passwordHash)
+        static void startServer(string passwordHash, int threads, int chars)
         {
             var cache = RedisConnectorHelper.Connection().GetDatabase();
+            cache.StringSet("chars", chars);
 
             //save passwordHash
             cache.StringSet("passwordHash", passwordHash);
@@ -69,53 +85,37 @@ namespace SimpleDeHashing
             cache.KeyDelete("foundpassword");
             cache.KeyDelete("trys");
 
-            Hack();
-
-            while (String.IsNullOrEmpty(cache.StringGet("foundpassword")))
-            {
-                Thread.Sleep(2000);
-            }
-
-            Console.WriteLine("Found Password: " + cache.StringGet("foundpassword"));
-            Console.WriteLine("Number of trys: " + cache.StringGet("trys"));
-
+            Hack(threads);
 
         }
 
-        static void startClient()
+        static void startClient(int threads)
         {
-            Hack();
 
-            var cache = RedisConnectorHelper.Connection().GetDatabase();
-
-            while (String.IsNullOrEmpty(cache.StringGet("foundpassword")))
-            {
-                Thread.Sleep(2000);
-            }
-
-            Console.WriteLine("Found Password: " + cache.StringGet("foundpassword"));
-            Console.WriteLine("Number of trys: " + cache.StringGet("trys"));
+            Hack(threads);
 
         }
 
-        static void Hack() {
+        static void Hack(int threads) {
 
-            for (int x = 0; x < 8; x++)
+            for (int x = 0; x < threads; x++)
             {
                 Thread thread = new Thread(() => {
 
                     var cache = RedisConnectorHelper.Connection().GetDatabase();
                     string? crypt = cache.StringGet("passwordHash");
+                    int chars = Convert.ToInt32(cache.StringGet("chars"));
+
                     int trys = 0;
                     while (true)
                     {
                         var rnd = new Random();
                         trys++;
-                        string testPassword = KeyGenerator.GetUniqueKey(rnd.Next(1,5));
+                        string testPassword = KeyGenerator.GetUniqueKey(rnd.Next(1, chars));
 
                         while (cache.SetContains("mylist", testPassword))
                         {
-                            testPassword = KeyGenerator.GetUniqueKey(rnd.Next(1, 5));
+                            testPassword = KeyGenerator.GetUniqueKey(rnd.Next(1, chars));
                         }
 
                         cache.SetAdd("mylist", testPassword);
@@ -141,6 +141,17 @@ namespace SimpleDeHashing
                 });
                 thread.Start();
             }
+
+            var cache = RedisConnectorHelper.Connection().GetDatabase();
+
+            while (String.IsNullOrEmpty(cache.StringGet("foundpassword")))
+            {
+                Thread.Sleep(2000);
+            }
+
+            Console.WriteLine();
+            Console.WriteLine("Found Password: " + cache.StringGet("foundpassword"));
+            Console.WriteLine("Number of trys: " + cache.StringGet("trys"));
 
         }
 
