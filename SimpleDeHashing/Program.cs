@@ -26,7 +26,6 @@ namespace SimpleDeHashing
             {
 
                 int threads = EasyCommandLine.PromtInt("Number of Threads");
-                int chars = EasyCommandLine.PromtInt("Number of Chars");
 
                 Console.WriteLine("\nPress 1 for Client");
                 Console.WriteLine("Press 2 for Server\n");
@@ -38,6 +37,9 @@ namespace SimpleDeHashing
                     startClient(threads);
                 } else
                 {
+
+                    int chars = EasyCommandLine.PromtInt("Number of Chars");
+
                     Console.WriteLine();
 
                     string passwordHash = EasyCommandLine.PromtString("passwordHash");
@@ -85,6 +87,8 @@ namespace SimpleDeHashing
             cache.KeyDelete("foundpassword");
             cache.KeyDelete("trys");
 
+            Speed();
+
             Hack(threads);
 
         }
@@ -92,9 +96,39 @@ namespace SimpleDeHashing
         static void startClient(int threads)
         {
 
+            Speed();
+
             Hack(threads);
 
         }
+
+        static void Speed()
+        {
+            Thread thread = new Thread(() =>
+            {
+                var cache = RedisConnectorHelper.Connection().GetDatabase();
+                int chars = Convert.ToInt32(cache.StringGet("chars"));
+
+                double posibilities = 0;
+                for (int x = 1; x <= chars; x++)
+                {
+                    posibilities += Math.Pow(62, x);
+                }
+
+                while (String.IsNullOrEmpty(cache.StringGet("foundpassword")))
+                {
+                    int before = (int)cache.StringGet("trys");
+                    Thread.Sleep(1000);
+                    int after = (int)cache.StringGet("trys");
+
+                    Console.Write("Trys last second: " + (after - before) + "".PadRight(8));
+                    Console.WriteLine("trys/posibilities/percent: " + after + " / " + posibilities + " / " + ((after/posibilities) * 100) + "%");
+                }
+
+            });
+            thread.Start();
+        }
+
 
         static void Hack(int threads) {
 
@@ -111,11 +145,11 @@ namespace SimpleDeHashing
                     {
                         var rnd = new Random();
                         trys++;
-                        string testPassword = KeyGenerator.GetUniqueKey(rnd.Next(1, chars));
+                        string testPassword = KeyGenerator.GetUniqueKey(rnd.Next(1, chars + 1));
 
                         while (cache.SetContains("mylist", testPassword))
                         {
-                            testPassword = KeyGenerator.GetUniqueKey(rnd.Next(1, chars));
+                            testPassword = KeyGenerator.GetUniqueKey(rnd.Next(1, chars + 1));
                         }
 
                         cache.SetAdd("mylist", testPassword);
