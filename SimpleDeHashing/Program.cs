@@ -109,12 +109,13 @@ namespace SimpleDeHashing
                     int trys = 0;
                     while (true)
                     {
+                        var rnd = new Random();
                         trys++;
-                        string testPassword = KeyGenerator.GetUniqueKey(1);
+                        string testPassword = KeyGenerator.GetUniqueKey(rnd.Next(1,5));
 
                         while (cache.SetContains("mylist", testPassword))
                         {
-                            testPassword = KeyGenerator.GetUniqueKey(1);
+                            testPassword = KeyGenerator.GetUniqueKey(rnd.Next(1, 5));
                         }
 
                         cache.SetAdd("mylist", testPassword);
