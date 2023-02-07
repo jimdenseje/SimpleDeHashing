@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
@@ -73,6 +74,9 @@ namespace SimpleDeHashing
             //save passwordHash
             cache.StringSet("passwordHash", passwordHash);
 
+            long seconds = (long)DateTime.UtcNow.Subtract(DateTime.UnixEpoch).TotalSeconds;
+            cache.StringSet("starttime", seconds);
+
             // cache.SetLength("mylist") how to get total number of items in set?
 
             /*
@@ -108,6 +112,7 @@ namespace SimpleDeHashing
             {
                 var cache = RedisConnectorHelper.Connection().GetDatabase();
                 int chars = Convert.ToInt32(cache.StringGet("chars"));
+                long seconds = (long)cache.StringGet("starttime");
 
                 double posibilities = 0;
                 for (int x = 1; x <= chars; x++)
@@ -121,8 +126,11 @@ namespace SimpleDeHashing
                     Thread.Sleep(1000);
                     int after = (int)cache.StringGet("trys");
 
+                    long secondsnow = (long)DateTime.UtcNow.Subtract(DateTime.UnixEpoch).TotalSeconds;
+
                     Console.Write("Trys last second: " + (after - before) + "".PadRight(8));
-                    Console.WriteLine("trys/posibilities/percent: " + after + " / " + posibilities + " / " + ((after/posibilities) * 100) + "%");
+                    Console.WriteLine("trys/posibilities/percent: " + after + " / " + posibilities + " / " + Math.Round((after/posibilities) * 100, 2) +
+                        "% Seconds since start: " + (secondsnow - seconds) + " estemated time (unlocky/current speed) in hours: " + Math.Round((posibilities / (after - before)) / 60 / 60, 2));
                 }
 
             });
@@ -183,9 +191,13 @@ namespace SimpleDeHashing
                 Thread.Sleep(2000);
             }
 
+            long seconds = (long)cache.StringGet("starttime");
+            long secondsnow = (long)DateTime.UtcNow.Subtract(DateTime.UnixEpoch).TotalSeconds;
+
             Console.WriteLine();
             Console.WriteLine("Found Password: " + cache.StringGet("foundpassword"));
             Console.WriteLine("Number of trys: " + cache.StringGet("trys"));
+            Console.WriteLine("Seconds since start: " + (secondsnow - seconds));
 
         }
 
